@@ -151,8 +151,8 @@ export default function AppShell({ children, isAdmin = false, title }: {
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'var(--bg-elevated)', border: '2px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
-            <div style={{ textAlign: 'right' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: 'var(--bg-elevated)', border: '2px solid var(--border)', boxShadow: 'var(--shadow-card)', flexShrink: 0 }}>
+            <div className="topbar-user-text" style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{user.name}</div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{user.noreg}</div>
             </div>

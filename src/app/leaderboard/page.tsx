@@ -81,7 +81,7 @@ export default function LeaderboardPage() {
       {/* Filters */}
       <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* Label + Line row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="lb-filter-row" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap', minWidth: 36 }}>LINE</span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {LINE_OPTS.map(opt => {
@@ -115,7 +115,7 @@ export default function LeaderboardPage() {
           </div>
         </div>
         {/* Label + Shift row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="lb-filter-row" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap', minWidth: 36 }}>SHIFT</span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {SHIFT_OPTS.map(opt => {
