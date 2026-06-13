@@ -79,7 +79,7 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* Label + Line row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'var(--text-muted)', textTransform: 'uppercase', whiteSpace: 'nowrap', minWidth: 36 }}>LINE</span>
@@ -152,7 +152,7 @@ export default function LeaderboardPage() {
 
       {/* My rank banner */}
       {myRank > 0 && (
-        <div className="neo-card pat-stripes" style={{ padding: '16px 22px', backgroundColor: '#ffd23f', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="neo-card pat-stripes lb-rank-banner" style={{ padding: '16px 22px', backgroundColor: '#ffd23f', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
           <Trophy size={20} style={{ color: '#000', flexShrink: 0 }} />
           <span style={{ fontSize: 15, fontWeight: 700, color: '#000' }}>
             Peringkat kamu: <span style={{ fontFamily: 'var(--font-bebas), sans-serif', fontSize: 24, letterSpacing: '-0.02em' }}>#{myRank}</span> dari {filtered.length} peserta
@@ -162,8 +162,8 @@ export default function LeaderboardPage() {
 
       {/* Podium top 10 */}
       {top10.length > 0 && (
-        <div className="neo-card-lg pat-grid-w" style={{ backgroundColor: '#a855f7', marginBottom: 24, padding: 20 }}>
-          <div style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 18, letterSpacing: '0.06em', color: '#fff', marginBottom: 16 }}>PODIUM TERATAS</div>
+        <div className="neo-card-lg pat-grid-w lb-section" style={{ backgroundColor: '#a855f7', marginBottom: 24, padding: 20 }}>
+          <div className="lb-section-title" style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 18, letterSpacing: '0.06em', color: '#fff', marginBottom: 16 }}>PODIUM TERATAS</div>
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
             {top10.map((u, i) => {
               const c = TOP10_COLORS[i];
@@ -215,9 +215,9 @@ export default function LeaderboardPage() {
       )}
 
       {/* Bar chart */}
-      <div className="neo-card pat-dots-w" style={{ backgroundColor: '#ec4899', marginBottom: 24, padding: 20 }}>
-        <div style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 18, letterSpacing: '0.06em', color: '#fff', marginBottom: 16 }}>TOP 8 PESERTA</div>
-        <div style={{ height: 240 }}>
+      <div className="neo-card pat-dots-w lb-section" style={{ backgroundColor: '#ec4899', marginBottom: 24, padding: 20 }}>
+        <div className="lb-section-title" style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 18, letterSpacing: '0.06em', color: '#fff', marginBottom: 16 }}>TOP 8 PESERTA</div>
+        <div className="lb-chart">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 5, right: 10, bottom: 5, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.20)" />
@@ -235,12 +235,12 @@ export default function LeaderboardPage() {
       </div>
 
       {/* Full table */}
-      <div className="neo-card pat-lines" style={{ backgroundColor: '#bfdbfe', padding: 20, '--text-primary': '#111111', '--text-secondary': '#374151', '--text-muted': '#6b7280', '--bg-elevated': '#dbeafe', '--border': 'rgba(0,0,0,0.15)' } as React.CSSProperties}>
-        <div style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 18, letterSpacing: '0.06em', color: '#111', marginBottom: 16 }}>DAFTAR LENGKAP ({filtered.length} PESERTA)</div>
+      <div className="neo-card pat-lines lb-section" style={{ backgroundColor: '#bfdbfe', padding: 20, '--text-primary': '#111111', '--text-secondary': '#374151', '--text-muted': '#6b7280', '--bg-elevated': '#dbeafe', '--border': 'rgba(0,0,0,0.15)' } as React.CSSProperties}>
+        <div className="lb-section-title" style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 18, letterSpacing: '0.06em', color: '#111', marginBottom: 16 }}>DAFTAR LENGKAP ({filtered.length} PESERTA)</div>
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
-              <tr><th>#</th><th>Nama</th><th>Line</th><th>Shift</th><th>Level</th><th>Poin</th><th>Percobaan</th></tr>
+              <tr><th>#</th><th>Nama</th><th>Line</th><th className="lb-col-hide">Shift</th><th>Level</th><th>Poin</th><th className="lb-col-hide">Percobaan</th></tr>
             </thead>
             <tbody>
               {filtered.map((u, i) => {
@@ -265,13 +265,13 @@ export default function LeaderboardPage() {
                       </div>
                     </td>
                     <td><span className="badge badge-muted">{u.line}</span></td>
-                    <td><span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{u.division}</span></td>
+                    <td className="lb-col-hide"><span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{u.division}</span></td>
                     <td>
                       <span style={{ fontSize: 13 }}>{BADGES[lvl.level]}</span>
                       <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 4 }}>Lv.{lvl.level}</span>
                     </td>
                     <td><span style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 17, fontWeight: 800, color: '#ffd23f', textShadow: '0 1px 2px rgba(0,0,0,0.40)' }}>{u.totalPoints}</span></td>
-                    <td><span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{u.attempts}x</span></td>
+                    <td className="lb-col-hide"><span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{u.attempts}x</span></td>
                   </tr>
                 );
               })}
