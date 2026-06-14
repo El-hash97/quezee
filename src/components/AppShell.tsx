@@ -48,6 +48,48 @@ export default function AppShell({ children, isAdmin = false, title }: {
     if (savedBg) applyTheme(savedBg);
   }, []);
 
+  useEffect(() => {
+    const SEL = '.neo-card, .neo-card-lg, .stat-card, .card, .tool-card';
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const el = entry.target as HTMLElement;
+          el.classList.add('sr-in');
+          io.unobserve(el);
+          setTimeout(() => {
+            el.classList.remove('sr', 'sr-in');
+            el.removeAttribute('data-sr-d');
+          }, 520);
+        });
+      },
+      { threshold: 0.06, rootMargin: '0px 0px -16px 0px' }
+    );
+
+    function initEl(el: Element) {
+      if (el.hasAttribute('data-sr') || el.classList.contains('animate-fade-up')) return;
+      el.setAttribute('data-sr', '1');
+      el.classList.add('sr');
+      const parent = el.parentElement;
+      if (parent) {
+        const siblings = Array.from(parent.querySelectorAll(SEL));
+        const pos = siblings.indexOf(el);
+        if (pos >= 1 && pos <= 5) el.setAttribute('data-sr-d', String(pos));
+      }
+      io.observe(el);
+    }
+
+    const content = document.querySelector('.app-content');
+    if (!content) return;
+    content.querySelectorAll(SEL).forEach(initEl);
+
+    const mo = new MutationObserver(() => content.querySelectorAll(SEL).forEach(initEl));
+    mo.observe(content, { childList: true, subtree: true });
+
+    return () => { io.disconnect(); mo.disconnect(); };
+  }, [pathname]);
+
   const user: SessionUser = sessionUser ?? {
     noreg: '…', name: '…', role: isAdmin ? 'ADMIN' : 'PARTICIPANT',
     totalPoints: 0, attempts: 0,

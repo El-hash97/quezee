@@ -134,7 +134,7 @@ export default function LoginPage() {
               <div style={{
                 fontFamily: 'var(--font-bebas), sans-serif',
                 fontSize: 22, fontWeight: 800, letterSpacing: '-0.01em',
-                color: 'var(--text-primary)',
+                color: '#ffffff',
               }}>
                 Quezee Platform
               </div>
