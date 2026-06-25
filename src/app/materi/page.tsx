@@ -1,8 +1,14 @@
 'use client';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Clock, ChevronRight, BookOpen } from 'lucide-react';
 import AppShell from '@/components/AppShell';
-import { MATERIALS } from '@/lib/mockData';
+
+interface Material {
+  id: string; title: string; category: string;
+  icon: string | null; description: string | null;
+  readTime: number | null; fileUrl: string | null;
+}
 
 const NEO_SEVEN = [
   { bg: '#ef4444', fg: '#fff', pat: 'pat-dots-w' },
@@ -26,8 +32,14 @@ const NEO_EIGHT = [
 ];
 
 export default function MateriPage() {
-  const sevenTools = MATERIALS.filter(m => m.category === 'seven-tools');
-  const eightSteps = MATERIALS.filter(m => m.category === '8-steps');
+  const [materials, setMaterials] = useState<Material[]>([]);
+
+  useEffect(() => {
+    fetch('/api/materials').then(r => r.json()).then(d => { if (Array.isArray(d)) setMaterials(d); }).catch(() => {});
+  }, []);
+
+  const sevenTools = materials.filter(m => m.category === 'seven-tools');
+  const eightSteps = materials.filter(m => m.category === '8-steps');
 
   return (
     <AppShell title="Materi">
@@ -36,7 +48,6 @@ export default function MateriPage() {
         <div className="page-subtitle">Seven Tools & 8 Steps — Metodologi QCC Pabrik</div>
       </div>
 
-      {/* Seven Tools */}
       <section style={{ marginBottom: 32 }}>
         <div className="neo-card pat-dots" style={{ backgroundColor: '#ffd23f', padding: '16px 22px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ fontSize: 34 }}>🔧</div>
@@ -46,7 +57,6 @@ export default function MateriPage() {
           </div>
           <div style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 40, color: '#000', lineHeight: 1 }}>{sevenTools.length}</div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
           {sevenTools.map((m, i) => {
             const c = NEO_SEVEN[i % NEO_SEVEN.length];
@@ -76,7 +86,6 @@ export default function MateriPage() {
         </div>
       </section>
 
-      {/* 8 Steps */}
       <section>
         <div className="neo-card pat-stripes-w" style={{ backgroundColor: '#2563eb', padding: '16px 22px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ fontSize: 34 }}>📋</div>
@@ -86,7 +95,6 @@ export default function MateriPage() {
           </div>
           <div style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 40, color: '#fff', lineHeight: 1 }}>{eightSteps.length}</div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 16 }}>
           {eightSteps.map((m, i) => {
             const c = NEO_EIGHT[i % NEO_EIGHT.length];
@@ -116,7 +124,6 @@ export default function MateriPage() {
         </div>
       </section>
 
-      {/* CTA */}
       <div className="neo-card-lg pat-zigzag-w" style={{ marginTop: 32, padding: '24px 28px', backgroundColor: '#ec4899', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <BookOpen size={28} style={{ color: '#fff', flexShrink: 0 }} />
         <div style={{ flex: 1 }}>

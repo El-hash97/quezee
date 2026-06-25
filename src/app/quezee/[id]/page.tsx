@@ -3,40 +3,43 @@ import { use, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, XCircle, ChevronRight, Trophy, RotateCcw, Clock } from 'lucide-react';
 import AppShell from '@/components/AppShell';
-import { QUESTIONS } from '@/lib/mockData';
 
-const KEYS = ['A', 'B', 'C', 'D'];
-const TOTAL = 25;
-const TIMER = 45;
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+interface QuizQuestion {
+  id: number; materialId: string | null;
+  question: string; options: string[];
+  correctIndex: number; explanation: string | null;
 }
+
+const KEYS  = ['A', 'B', 'C', 'D'];
+const TIMER = 45;
 
 export default function QuizPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
 
-  const pool = id === 'all' ? QUESTIONS
-    : id === 'seven-tools' ? QUESTIONS.filter(q => !q.materialId.startsWith('langkah'))
-    : QUESTIONS.filter(q => q.materialId.startsWith('langkah'));
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [current,   setCurrent]   = useState(0);
+  const [selected,  setSelected]  = useState<number | null>(null);
+  const [answered,  setAnswered]  = useState(false);
+  const [score,     setScore]     = useState(0);
+  const [results,   setResults]   = useState<boolean[]>([]);
+  const [done,      setDone]      = useState(false);
+  const [timeLeft,  setTimeLeft]  = useState(TIMER);
 
-  const [questions] = useState(() => shuffle(pool).slice(0, TOTAL));
-  const [current, setCurrent] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [answered, setAnswered] = useState(false);
-  const [score, setScore] = useState(0);
-  const [results, setResults] = useState<boolean[]>([]);
-  const [done, setDone] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(TIMER);
+  useEffect(() => {
+    fetch(`/api/quiz/questions?topic=${id}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) { setLoadError(d.error); setLoading(false); return; }
+        if (Array.isArray(d)) { setQuestions(d); setLoading(false); }
+      })
+      .catch(() => { setLoadError('Gagal memuat soal. Periksa koneksi dan coba lagi.'); setLoading(false); });
+  }, [id]);
 
   const handleNext = useCallback(() => {
-    if (!answered) return;
+    if (!answered || questions.length === 0) return;
     const correct = selected === questions[current].correctIndex;
     setScore(s => s + (correct ? 5 : 0));
     setResults(r => [...r, correct]);
@@ -45,10 +48,13 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
   }, [answered, selected, questions, current]);
 
   useEffect(() => {
-    if (done || answered) return;
-    const t = setInterval(() => setTimeLeft(p => { if (p <= 1) { clearInterval(t); setAnswered(true); setSelected(null); return 0; } return p - 1; }), 1000);
+    if (done || answered || loading || questions.length === 0) return;
+    const t = setInterval(() => setTimeLeft(p => {
+      if (p <= 1) { clearInterval(t); setAnswered(true); setSelected(null); return 0; }
+      return p - 1;
+    }), 1000);
     return () => clearInterval(t);
-  }, [current, done, answered]);
+  }, [current, done, answered, loading, questions.length]);
 
   useEffect(() => {
     if (!answered) return;
@@ -56,24 +62,40 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
     return () => clearTimeout(t);
   }, [answered, handleNext]);
 
-  const q = questions[current];
-  const correctCount = results.filter(Boolean).length;
-
   const topicLabel = id === 'all' ? 'Semua Materi' : id === 'seven-tools' ? 'Seven Tools' : '8 Langkah';
 
   useEffect(() => {
     if (!done) return;
     const correct = results.filter(Boolean).length;
-    const wrong = results.length - correct;
     fetch('/api/quiz/attempts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic: topicLabel, correctAnswers: correct, wrongAnswers: wrong }),
+      body: JSON.stringify({ topic: topicLabel, correctAnswers: correct, wrongAnswers: results.length - correct }),
     }).catch(() => {});
   }, [done]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  if (loading) return (
+    <AppShell title="Quezee">
+      <div style={{ textAlign: 'center', padding: 64, color: 'var(--text-muted)' }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>⏳</div>
+        <div>Memuat soal...</div>
+      </div>
+    </AppShell>
+  );
+
+  if (loadError) return (
+    <AppShell title="Quezee">
+      <div style={{ textAlign: 'center', padding: 48 }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>⚠️</div>
+        <div style={{ fontSize: 15, color: 'var(--text-primary)', marginBottom: 16 }}>{loadError}</div>
+        <button className="btn btn-secondary" onClick={() => router.push('/quezee')}><RotateCcw size={14} /> Kembali</button>
+      </div>
+    </AppShell>
+  );
+
   if (done) {
-    const pct = Math.round((correctCount / questions.length) * 100);
+    const correctCount = results.filter(Boolean).length;
+    const pct   = Math.round((correctCount / questions.length) * 100);
     const grade = pct >= 80 ? { label: 'LUAR BIASA!', color: 'var(--green)' }
       : pct >= 60 ? { label: 'BAGUS!', color: 'var(--amber)' }
       : { label: 'TERUS BELAJAR', color: 'var(--blue)' };
@@ -119,6 +141,9 @@ export default function QuizPage({ params }: { params: Promise<{ id: string }> }
       </AppShell>
     );
   }
+
+  const q = questions[current];
+  const correctCount = results.filter(Boolean).length;
 
   return (
     <AppShell title={`Quezee — ${current + 1}/${questions.length}`}>

@@ -1,40 +1,52 @@
 'use client';
-import { use } from 'react';
+import { use, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Clock, BookOpen, Brain, ChevronRight } from 'lucide-react';
 import AppShell from '@/components/AppShell';
-import { MATERIALS } from '@/lib/mockData';
 
-function renderContent(text: string) {
-  return text.split('\n').map((line, i) => {
-    if (line.startsWith('## '))   return <h2 key={i} style={{ fontFamily: 'var(--font-bebas), sans-serif', fontSize: 22, letterSpacing: '0.04em', color: 'var(--text-primary)', margin: '24px 0 12px', lineHeight: 1 }}>{line.slice(3)}</h2>;
-    if (line.startsWith('### '))  return <h3 key={i} style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', margin: '20px 0 8px' }}>{line.slice(4)}</h3>;
-    if (line.startsWith('#### ')) return <h4 key={i} style={{ fontSize: 14, fontWeight: 700, color: 'var(--amber)', margin: '16px 0 6px' }}>{line.slice(5)}</h4>;
-    if (line.startsWith('- '))    return <li key={i} style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginLeft: 20, marginBottom: 4 }} dangerouslySetInnerHTML={{ __html: line.slice(2).replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary)">$1</strong>') }} />;
-    if (/^\d+\./.test(line))      return <li key={i} style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginLeft: 20, marginBottom: 4, listStyleType: 'decimal' }} dangerouslySetInnerHTML={{ __html: line.replace(/^\d+\.\s*/, '').replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary)">$1</strong>') }} />;
-    if (line.trim() === '')        return <div key={i} style={{ height: 8 }} />;
-    return <p key={i} style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, margin: '4px 0' }} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary)">$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') }} />;
-  });
+interface Material {
+  id: string; title: string; category: string;
+  icon: string | null; description: string | null;
+  readTime: number | null; color: string | null;
+  fileUrl: string | null; fileType: string | null;
 }
 
 export default function MateriDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const router = useRouter();
-  const material = MATERIALS.find(m => m.id === id);
-  const matIndex = MATERIALS.findIndex(m => m.id === id);
-  const prev = matIndex > 0 ? MATERIALS[matIndex - 1] : null;
-  const next = matIndex < MATERIALS.length - 1 ? MATERIALS[matIndex + 1] : null;
+  const { id }     = use(params);
+  const router     = useRouter();
+  const [material, setMaterial] = useState<Material | null>(null);
+  const [allMats,  setAllMats]  = useState<Material[]>([]);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!material) return (
+  useEffect(() => {
+    fetch('/api/materials').then(r => r.json()).then(d => { if (Array.isArray(d)) setAllMats(d); }).catch(() => {});
+    fetch(`/api/materials/${id}`).then(r => {
+      if (r.status === 404) { setNotFound(true); return null; }
+      return r.json();
+    }).then(d => { if (d) setMaterial(d); }).catch(() => {});
+  }, [id]);
+
+  if (notFound) return (
     <AppShell title="Materi">
       <div className="empty-state">
         <div style={{ fontSize: 40 }}>📚</div>
         <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>Materi tidak ditemukan</div>
-        <Link href="/materi" className="btn btn-primary btn-sm">← Kembali</Link>
+        <Link href="/materi" className="btn btn-primary btn-sm">Kembali</Link>
       </div>
     </AppShell>
   );
+
+  if (!material) return (
+    <AppShell title="Materi">
+      <div style={{ textAlign: 'center', padding: 48, color: 'var(--text-muted)' }}>Memuat materi...</div>
+    </AppShell>
+  );
+
+  const matIndex = allMats.findIndex(m => m.id === id);
+  const prev     = matIndex > 0 ? allMats[matIndex - 1] : null;
+  const next     = matIndex < allMats.length - 1 ? allMats[matIndex + 1] : null;
+  const accent   = material.color ?? '#4F8EF7';
 
   return (
     <AppShell title={material.title}>
@@ -43,10 +55,9 @@ export default function MateriDetailPage({ params }: { params: Promise<{ id: str
           <ArrowLeft size={14} /> Kembali
         </button>
 
-        {/* Header */}
-        <div style={{ background: `linear-gradient(135deg, var(--bg-card) 0%, ${material.color}10 100%)`, border: `1px solid ${material.color}30`, borderRadius: 'var(--radius-xl)', padding: '28px 32px', marginBottom: 24 }}>
+        <div style={{ background: `linear-gradient(135deg, var(--bg-card) 0%, ${accent}10 100%)`, border: `1px solid ${accent}30`, borderRadius: 'var(--radius-xl)', padding: '28px 32px', marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-            <div style={{ width: 64, height: 64, borderRadius: 16, background: `${material.color}18`, border: `1px solid ${material.color}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, flexShrink: 0 }}>
+            <div style={{ width: 64, height: 64, borderRadius: 16, background: `${accent}18`, border: `1px solid ${accent}35`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, flexShrink: 0 }}>
               {material.icon}
             </div>
             <div>
@@ -57,18 +68,27 @@ export default function MateriDetailPage({ params }: { params: Promise<{ id: str
               <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: '8px 0 0' }}>{material.description}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-muted)', fontSize: 13 }}><Clock size={13} /> {material.readTime} menit baca</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-muted)', fontSize: 13 }}><BookOpen size={13} /> Materi #{matIndex + 1}</div>
+                {matIndex >= 0 && <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--text-muted)', fontSize: 13 }}><BookOpen size={13} /> Materi #{matIndex + 1}</div>}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="card" style={{ padding: '28px 32px', marginBottom: 24 }}>
-          {renderContent(material.content)}
+        <div className="card" style={{ padding: material.fileUrl ? 0 : '28px 32px', marginBottom: 24, overflow: 'hidden' }}>
+          {material.fileUrl ? (
+            <iframe
+              src={material.fileUrl}
+              style={{ width: '100%', height: 600, border: 'none', display: 'block' }}
+              title={material.title}
+            />
+          ) : (
+            <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
+              <div style={{ fontSize: 14 }}>Konten materi belum diupload oleh admin.</div>
+            </div>
+          )}
         </div>
 
-        {/* Prev / Next */}
         <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
           {prev && (
             <Link href={`/materi/${prev.id}`} className="card card-hover" style={{ flex: 1, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -90,7 +110,6 @@ export default function MateriDetailPage({ params }: { params: Promise<{ id: str
           )}
         </div>
 
-        {/* CTA */}
         <div style={{ padding: '20px 24px', background: 'var(--amber-glow)', border: '1px solid rgba(5,150,105,0.25)', borderRadius: 'var(--radius-lg)', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
           <Brain size={22} style={{ color: 'var(--amber)', flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
