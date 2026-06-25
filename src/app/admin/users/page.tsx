@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Search, Download, Users, Pencil, X, Check, AlertCircle, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Search, Download, Users, Pencil, X, Check, AlertCircle, RotateCcw, AlertTriangle, UserPlus } from 'lucide-react';
 import AppShell from '@/components/AppShell';
 import { getLevel, LINES, SHIFTS } from '@/lib/mockData';
 
@@ -33,11 +33,22 @@ export default function AdminUsersPage() {
 
   /* ── Edit modal state ── */
   const [editing, setEditing] = useState<UserRow | null>(null);
+  const [editName, setEditName] = useState('');
   const [editLine, setEditLine] = useState('');
   const [editShift, setEditShift] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [saveOk, setSaveOk] = useState(false);
+
+  /* ── Add user modal state ── */
+  const [addOpen, setAddOpen] = useState(false);
+  const [addNoreg, setAddNoreg] = useState('');
+  const [addName, setAddName] = useState('');
+  const [addLine, setAddLine] = useState('');
+  const [addShift, setAddShift] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState('');
+  const [addOk, setAddOk] = useState(false);
 
   /* ── Reset per-user modal state ── */
   const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
@@ -67,6 +78,7 @@ export default function AdminUsersPage() {
 
   function openEdit(u: UserRow) {
     setEditing(u);
+    setEditName(u.name);
     setEditLine(u.line || LINES[1]);
     setEditShift(u.division || SHIFTS[1]);
     setSaveError('');
@@ -74,6 +86,12 @@ export default function AdminUsersPage() {
   }
 
   function closeEdit() { setEditing(null); setSaveError(''); setSaveOk(false); }
+
+  function openAdd() {
+    setAddNoreg(''); setAddName(''); setAddLine(LINES[1] || ''); setAddShift(SHIFTS[1] || '');
+    setAddError(''); setAddOk(false); setAddOpen(true);
+  }
+  function closeAdd() { setAddOpen(false); setAddError(''); setAddOk(false); }
 
   function openReset(u: UserRow) { setResetTarget(u); setResetError(''); }
   function closeReset() { setResetTarget(null); setResetError(''); }
@@ -87,6 +105,26 @@ export default function AdminUsersPage() {
     if (Array.isArray(d)) setUsers(d);
   }
 
+  async function handleAddUser() {
+    setAdding(true); setAddError(''); setAddOk(false);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noreg: addNoreg, name: addName, line: addLine, division: addShift }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setAddError(`[${res.status}] ${data.error ?? 'Gagal menambah.'}`); return; }
+      setAddOk(true);
+      await refetch();
+      setTimeout(closeAdd, 1000);
+    } catch (e) {
+      setAddError(`Error: ${e instanceof Error ? e.message : 'Kesalahan jaringan.'}`);
+    } finally {
+      setAdding(false);
+    }
+  }
+
   async function handleSave() {
     if (!editing) return;
     setSaving(true); setSaveError(''); setSaveOk(false);
@@ -94,13 +132,13 @@ export default function AdminUsersPage() {
       const res = await fetch(`/api/admin/users/${editing.noreg}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ line: editLine, division: editShift }),
+        body: JSON.stringify({ name: editName, line: editLine, division: editShift }),
       });
       const data = await res.json();
       if (!res.ok) { setSaveError(`[${res.status}] ${data.error ?? 'Gagal menyimpan.'}`); return; }
       setUsers(prev => prev.map(u =>
         u.noreg === editing.noreg
-          ? { ...u, line: data.saved?.line ?? editLine, division: data.saved?.division ?? editShift }
+          ? { ...u, name: data.saved?.name ?? editName, line: data.saved?.line ?? editLine, division: data.saved?.division ?? editShift }
           : u
       ));
       setLineFilter('Semua Line');
@@ -186,6 +224,10 @@ export default function AdminUsersPage() {
         <select className="input" style={{ maxWidth: 160 }} value={divFilter} onChange={e => setDivFilter(e.target.value)}>
           {SHIFTS.map(d => <option key={d}>{d}</option>)}
         </select>
+        <button className="btn btn-primary btn-sm" onClick={openAdd}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--green)', color: '#000', border: '2px solid #000', boxShadow: '3px 3px 0 0 #000', fontWeight: 700 }}>
+          <UserPlus size={14} /> Tambah Peserta
+        </button>
         <button className="btn btn-primary btn-sm" onClick={() => exportCSV(filtered)}>
           <Download size={14} /> Export CSV ({filtered.length})
         </button>
@@ -288,7 +330,7 @@ export default function AdminUsersPage() {
             onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <div>
-                <div style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 20, letterSpacing: '0.06em', color: 'var(--text-primary)' }}>EDIT LINE & SHIFT</div>
+                <div style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 20, letterSpacing: '0.06em', color: 'var(--text-primary)' }}>EDIT PESERTA</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                   {editing.name} · <span style={{ color: 'var(--amber)' }}>{editing.noreg.padStart(7, '0')}</span>
                 </div>
@@ -309,6 +351,10 @@ export default function AdminUsersPage() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="input-group">
+                <label className="input-label">Nama</label>
+                <input className="input" value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nama peserta..." />
+              </div>
+              <div className="input-group">
                 <label className="input-label">Line Baru</label>
                 <select className="input" value={editLine} onChange={e => setEditLine(e.target.value)}>
                   {LINES.slice(1).map(l => <option key={l} value={l}>{l}</option>)}
@@ -324,11 +370,11 @@ export default function AdminUsersPage() {
                 <div className="alert alert-error"><AlertCircle size={14} style={{ flexShrink: 0 }} /><span style={{ fontSize: 12 }}>{saveError}</span></div>
               )}
               {saveOk && (
-                <div className="alert alert-success"><Check size={14} style={{ flexShrink: 0 }} /><span style={{ fontSize: 12 }}>Tersimpan! Line: <strong>{editLine}</strong> · Shift: <strong>{editShift}</strong></span></div>
+                <div className="alert alert-success"><Check size={14} style={{ flexShrink: 0 }} /><span style={{ fontSize: 12 }}>Tersimpan!</span></div>
               )}
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                 <button type="button" className="btn btn-ghost btn-lg" style={{ flex: 1 }} onClick={closeEdit}>Batal</button>
-                <button type="button" className="btn btn-primary btn-lg" style={{ flex: 2 }} disabled={saving || (!editLine || !editShift)} onClick={handleSave}>
+                <button type="button" className="btn btn-primary btn-lg" style={{ flex: 2 }} disabled={saving || (!editLine || !editShift || !editName.trim())} onClick={handleSave}>
                   {saving ? 'Menyimpan...' : <><Check size={15} /> Simpan Perubahan</>}
                 </button>
               </div>
@@ -402,6 +448,76 @@ export default function AdminUsersPage() {
               >
                 <RotateCcw size={15} /> {resetting ? 'Mereset...' : 'Ya, Reset Poin'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add User Modal ── */}
+      {addOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.72)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+        }} onClick={closeAdd}>
+          <div className="neo-card pat-grid"
+            style={{ backgroundColor: '#1a1a2e', width: '100%', maxWidth: 420, padding: 28, position: 'relative' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, background: 'var(--green)', border: '2px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <UserPlus size={18} color="#000" />
+                </div>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-bebas),sans-serif', fontSize: 20, letterSpacing: '0.06em', color: 'var(--text-primary)' }}>TAMBAH PESERTA</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Daftarkan peserta baru</div>
+                </div>
+              </div>
+              <button onClick={closeAdd} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="input-group">
+                <label className="input-label">No. Registrasi <span style={{ color: 'var(--red)' }}>*</span></label>
+                <input className="input" value={addNoreg} onChange={e => setAddNoreg(e.target.value)} placeholder="Contoh: 0012345" maxLength={7} />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Nama Lengkap <span style={{ color: 'var(--red)' }}>*</span></label>
+                <input className="input" value={addName} onChange={e => setAddName(e.target.value)} placeholder="Nama peserta..." />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Line</label>
+                <select className="input" value={addLine} onChange={e => setAddLine(e.target.value)}>
+                  <option value="">-- Pilih Line --</option>
+                  {LINES.slice(1).map(l => <option key={l} value={l}>{l}</option>)}
+                </select>
+              </div>
+              <div className="input-group">
+                <label className="input-label">Shift</label>
+                <select className="input" value={addShift} onChange={e => setAddShift(e.target.value)}>
+                  <option value="">-- Pilih Shift --</option>
+                  {SHIFTS.slice(1).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              {addError && (
+                <div className="alert alert-error"><AlertCircle size={14} style={{ flexShrink: 0 }} /><span style={{ fontSize: 12 }}>{addError}</span></div>
+              )}
+              {addOk && (
+                <div className="alert alert-success"><Check size={14} style={{ flexShrink: 0 }} /><span style={{ fontSize: 12 }}>Peserta berhasil ditambahkan!</span></div>
+              )}
+              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                <button type="button" className="btn btn-ghost btn-lg" style={{ flex: 1 }} onClick={closeAdd}>Batal</button>
+                <button
+                  type="button"
+                  className="btn btn-lg"
+                  style={{ flex: 2, background: 'var(--green)', color: '#000', border: '2px solid #000', boxShadow: '3px 3px 0 0 #000', fontWeight: 700 }}
+                  disabled={adding || !addNoreg.trim() || !addName.trim()}
+                  onClick={handleAddUser}
+                >
+                  {adding ? 'Menyimpan...' : <><UserPlus size={15} /> Tambah Peserta</>}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -2,12 +2,16 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import {
   LayoutDashboard, BookOpen, Brain, TrendingUp, Trophy,
   Users, FileText, BarChart2, LogOut, Menu, ChevronRight,
 } from 'lucide-react';
 import { getLevel } from '@/lib/mockData';
 import { applyTheme, THEME_KEY } from '@/lib/theme';
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface SessionUser {
   noreg: string; name: string; role: string;
@@ -49,45 +53,56 @@ export default function AppShell({ children, isAdmin = false, title }: {
   }, []);
 
   useEffect(() => {
-    const SEL = '.neo-card, .neo-card-lg, .stat-card, .card, .tool-card';
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (!entry.isIntersecting) return;
-          const el = entry.target as HTMLElement;
-          el.classList.add('sr-in');
-          io.unobserve(el);
-          setTimeout(() => {
-            el.classList.remove('sr', 'sr-in');
-            el.removeAttribute('data-sr-d');
-          }, 520);
+    let ctx: gsap.Context | undefined;
+
+    const raf = requestAnimationFrame(() => {
+      const content = document.querySelector<HTMLElement>('.app-content');
+      if (!content) return;
+
+      ctx = gsap.context(() => {
+        // Page heading — slide in from left on page load
+        gsap.from('.page-title', {
+          x: -22, opacity: 0, duration: 0.40, ease: 'power3.out',
+          clearProps: 'transform,opacity',
         });
-      },
-      { threshold: 0.06, rootMargin: '0px 0px -16px 0px' }
-    );
+        gsap.from('.page-subtitle', {
+          y: 8, opacity: 0, delay: 0.10, duration: 0.30, ease: 'power2.out',
+          clearProps: 'transform,opacity',
+        });
 
-    function initEl(el: Element) {
-      if (el.hasAttribute('data-sr') || el.classList.contains('animate-fade-up')) return;
-      el.setAttribute('data-sr', '1');
-      el.classList.add('sr');
-      const parent = el.parentElement;
-      if (parent) {
-        const siblings = Array.from(parent.querySelectorAll(SEL));
-        const pos = siblings.indexOf(el);
-        if (pos >= 1 && pos <= 5) el.setAttribute('data-sr-d', String(pos));
-      }
-      io.observe(el);
-    }
+        // Section labels — scroll-triggered, slide from left
+        gsap.utils.toArray<HTMLElement>('.section-title').forEach(el => {
+          gsap.from(el, {
+            x: -14, opacity: 0, duration: 0.30, ease: 'power2.out',
+            clearProps: 'transform,opacity',
+            scrollTrigger: { trigger: el, start: 'top 92%', once: true },
+          });
+        });
 
-    const content = document.querySelector('.app-content');
-    if (!content) return;
-    content.querySelectorAll(SEL).forEach(initEl);
+        // Cards — batched stagger reveal on scroll
+        const CARD_SEL = '.neo-card, .neo-card-lg, .stat-card, .card, .tool-card';
+        const cards = gsap.utils.toArray<HTMLElement>(CARD_SEL);
+        if (cards.length) {
+          ScrollTrigger.batch(cards, {
+            onEnter: batch => gsap.from(batch, {
+              y: 26, opacity: 0, duration: 0.44, ease: 'power3.out',
+              stagger: 0.07, clearProps: 'transform,opacity',
+            }),
+            start: 'top 90%',
+            once: true,
+          });
+        }
 
-    const mo = new MutationObserver(() => content.querySelectorAll(SEL).forEach(initEl));
-    mo.observe(content, { childList: true, subtree: true });
+        ScrollTrigger.refresh();
+      }, content);
+    });
 
-    return () => { io.disconnect(); mo.disconnect(); };
+    return () => {
+      cancelAnimationFrame(raf);
+      ctx?.revert();
+    };
   }, [pathname]);
 
   const user: SessionUser = sessionUser ?? {

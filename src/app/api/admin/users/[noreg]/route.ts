@@ -18,16 +18,20 @@ export async function PATCH(
   const body = await req.json();
   const line: string = body.line;
   const division: string = body.division;
+  const name: string | undefined = body.name;
 
   if (!line || !division)
     return Response.json({ error: 'Line dan shift wajib diisi.' }, { status: 400 });
 
+  const updateData: { line: string; division: string; name?: string } = { line: String(line), division: String(division) };
+  if (name && name.trim()) updateData.name = name.trim();
+
   try {
     await db
       .update(users)
-      .set({ line: String(line), division: String(division) })
+      .set(updateData)
       .where(eq(users.noreg, String(noreg)));
-    return Response.json({ success: true, saved: { line, division } });
+    return Response.json({ success: true, saved: { line, division, name: updateData.name } });
   } catch (e) {
     console.error('PATCH /api/admin/users/[noreg]', e);
     return Response.json({ error: 'Gagal update database.' }, { status: 500 });
