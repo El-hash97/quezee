@@ -18,10 +18,12 @@ export default function AdminMateriPage() {
   const [search,    setSearch]    = useState('');
   const [catFilter, setCatFilter] = useState<'all' | 'seven-tools' | '8-steps'>('all');
   const [showForm,  setShowForm]  = useState(false);
-  const [editId,    setEditId]    = useState<string | null>(null);
-  const [form,      setForm]      = useState(emptyForm);
-  const [file,      setFile]      = useState<File | null>(null);
-  const [saving,    setSaving]    = useState(false);
+  const [editId,          setEditId]          = useState<string | null>(null);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  const [form,            setForm]            = useState(emptyForm);
+  const [file,            setFile]            = useState<File | null>(null);
+  const [removeFile,      setRemoveFile]      = useState(false);
+  const [saving,          setSaving]          = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -38,7 +40,7 @@ export default function AdminMateriPage() {
     (search === '' || m.title.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const resetForm = () => { setForm(emptyForm); setFile(null); setEditId(null); setShowForm(false); };
+  const resetForm = () => { setForm(emptyForm); setFile(null); setEditId(null); setEditingMaterial(null); setRemoveFile(false); setShowForm(false); };
 
   const handleSubmit = async () => {
     if (!form.title || !form.category || (!editId && !form.id)) {
@@ -48,6 +50,7 @@ export default function AdminMateriPage() {
     const fd = new FormData();
     Object.entries(form).forEach(([k, v]) => fd.append(k, v));
     if (file) fd.append('file', file);
+    if (removeFile) fd.append('removeFile', 'true');
     const url    = editId ? `/api/admin/materials/${editId}` : '/api/admin/materials';
     const method = editId ? 'PUT' : 'POST';
     const res  = await fetch(url, { method, body: fd });
@@ -59,7 +62,7 @@ export default function AdminMateriPage() {
 
   const handleEdit = (m: Material) => {
     setForm({ id: m.id, title: m.title, category: m.category, icon: m.icon ?? '', description: m.description ?? '', readTime: String(m.readTime ?? ''), color: m.color ?? '#4F8EF7' });
-    setEditId(m.id); setShowForm(true);
+    setEditId(m.id); setEditingMaterial(m); setRemoveFile(false); setFile(null); setShowForm(true);
   };
 
   const handleDelete = async (id: string, title: string) => {
@@ -139,26 +142,65 @@ export default function AdminMateriPage() {
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
             </div>
             <div style={{ gridColumn: '1 / -1' }}>
-              <label className="form-label">Upload File (PDF / DOCX) — maks. 10 MB</label>
-              <div style={{ border: '2px dashed var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <Upload size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  {file ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <FileText size={13} style={{ color: 'var(--green)' }} />
-                      <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{file.name}</span>
-                      <button className="btn btn-ghost btn-sm" style={{ padding: '2px 6px' }} onClick={() => setFile(null)}>✕</button>
+              {editId && editingMaterial?.fileUrl && !file && !removeFile ? (
+                <>
+                  <label className="form-label">File Materi</label>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <FileText size={16} style={{ color: 'var(--blue)', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                        {(editingMaterial.fileType ?? 'FILE').toUpperCase()} — File terkait
+                      </div>
+                      <a href={editingMaterial.fileUrl} target="_blank" rel="noreferrer"
+                        style={{ fontSize: 11, color: 'var(--blue)' }}>Lihat file ↗</a>
                     </div>
-                  ) : (
-                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Pilih file PDF atau DOCX...</span>
-                  )}
-                </div>
-                <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
-                  Browse
-                  <input type="file" accept=".pdf,.docx" style={{ display: 'none' }}
-                    onChange={e => setFile(e.target.files?.[0] ?? null)} />
-                </label>
-              </div>
+                    <button className="btn btn-ghost btn-sm"
+                      style={{ color: 'var(--red)', fontSize: 12, padding: '4px 10px' }}
+                      onClick={() => setRemoveFile(true)}>
+                      Hapus File
+                    </button>
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', fontSize: 12 }}>
+                      Ganti File
+                      <input type="file" accept=".pdf,.docx" style={{ display: 'none' }}
+                        onChange={e => setFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                  </div>
+                </>
+              ) : removeFile ? (
+                <>
+                  <label className="form-label">File Materi</label>
+                  <div className="alert alert-error" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span>File akan dihapus saat disimpan</span>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setRemoveFile(false)}>Batal</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <label className="form-label">
+                    {editId ? 'File Baru (PDF / DOCX)' : 'Upload File (PDF / DOCX)'} — maks. 10 MB
+                  </label>
+                  <div style={{ border: '2px dashed var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Upload size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      {file ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <FileText size={13} style={{ color: 'var(--green)' }} />
+                          <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>{file.name}</span>
+                          <button className="btn btn-ghost btn-sm" style={{ padding: '2px 6px' }}
+                            onClick={() => setFile(null)}>✕</button>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Pilih file PDF atau DOCX...</span>
+                      )}
+                    </div>
+                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                      Browse
+                      <input type="file" accept=".pdf,.docx" style={{ display: 'none' }}
+                        onChange={e => setFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                  </div>
+                </>
+              )}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>

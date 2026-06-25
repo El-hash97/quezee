@@ -25,6 +25,7 @@ export async function PUT(
   const readTime    = parseInt(String(fd.get('readTime') ?? '0')) || null;
   const color       = String(fd.get('color') ?? '').trim();
   const file        = fd.get('file') as File | null;
+  const doRemove    = fd.get('removeFile') === 'true';
 
   if (!title || !category)
     return Response.json({ error: 'Judul dan kategori wajib diisi.' }, { status: 400 });
@@ -35,7 +36,13 @@ export async function PUT(
   let fileUrl  = existing.fileUrl;
   let fileType = existing.fileType;
 
-  if (file && file.size > 0) {
+  if (doRemove && !(file && file.size > 0)) {
+    if (existing.fileUrl) {
+      await unlink(join(process.cwd(), 'public', existing.fileUrl)).catch(() => {});
+    }
+    fileUrl  = null;
+    fileType = null;
+  } else if (file && file.size > 0) {
     if (file.size > 10 * 1024 * 1024)
       return Response.json({ error: 'File maksimal 10 MB.' }, { status: 400 });
     const ext = (file.name.split('.').pop() ?? '').toLowerCase();
